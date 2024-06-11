@@ -5,10 +5,10 @@ import time
 import random
 from tqdm import tqdm
 
-# Cấu hình
-DELAY_BETWEEN_REQUESTS = (1, 3)  # Thời gian delay ngẫu nhiên giữa các request (giây)
-MAX_WORKERS = 5                  # Số lượng luồng tối đa
-RETRY_LIMIT = 3                  # Số lần thử lại tối đa cho mỗi request
+# Configuration
+DELAY_BETWEEN_REQUESTS = (1, 3)  # Random delay between requests (seconds)
+MAX_WORKERS = 5                  # Maximum number of threads
+RETRY_LIMIT = 3                  # Maximum number of retries for each request
 
 def fetch_with_retries(url, fetch_function, max_retries=RETRY_LIMIT):
     retries = 0
@@ -21,7 +21,7 @@ def fetch_with_retries(url, fetch_function, max_retries=RETRY_LIMIT):
             time.sleep(random.uniform(*DELAY_BETWEEN_REQUESTS))
     raise Exception(f"Failed to fetch {url} after {max_retries} retries")
 
-# Hàm để lấy số lượng trang từ trang đầu tiên
+# Function to get total pages from the first page
 def get_total_pages(url):
     response = requests.get(url)
     if response.status_code == 200:
@@ -33,7 +33,7 @@ def get_total_pages(url):
             return last_page
     return 1
 
-# Hàm để crawl một trang và trả về danh sách các sản phẩm
+# Function to crawl a page and return a list of products
 def crawl_page(url):
     while True:
         try:
@@ -69,7 +69,7 @@ def crawl_page(url):
             print(f"Error crawling page: {e}")
         time.sleep(random.uniform(*DELAY_BETWEEN_REQUESTS))
 
-# Hàm để crawl tất cả các trang
+# Function to crawl all pages
 def crawl_all_pages(base_url):
     first_page_url = f"{base_url}?{filter_query}"
     total_pages = fetch_with_retries(first_page_url, get_total_pages)
@@ -87,38 +87,38 @@ def crawl_all_pages(base_url):
 
     return all_products
 
-# Hỏi người dùng về các tùy chọn lọc
+# Ask user for filter options
 def get_user_input():
-    print("Chọn sản phẩm muốn lọc:")
+    print("Choose the product to filter:")
     print("1. MT4")
     print("2. MT5")
-    mt_option = input("Nhập 1 hoặc 2: ")
+    mt_option = input("Enter 1 or 2: ")
 
-    print("Chọn danh mục muốn lọc:")
+    print("Choose the category to filter:")
     print("1. Expert")
     print("2. Indicator")
     print("3. Library")
     print("4. Utility")
-    category_option = input("Nhập số từ 1 đến 4: ")
+    category_option = input("Enter a number from 1 to 4: ")
 
     price_from = None
     price_to = None
-    if input("Có muốn lọc theo khoảng giá không? (Y/N): ").lower() == 'y':
-        price_from = input("Nhập giá trị tối thiểu: ")
-        price_to = input("Nhập giá trị tối đa: ")
+    if input("Do you want to filter by price range? (Y/N): ").lower() == 'y':
+        price_from = input("Enter minimum price: ")
+        price_to = input("Enter maximum price: ")
 
     filters = []
-    if input("Có muốn lọc các giá trị khác không? (Y/N): ").lower() == 'y':
-        if input("Lọc theo Rating? (Y/N): ").lower() == 'y':
+    if input("Do you want to filter by other values? (Y/N): ").lower() == 'y':
+        if input("Filter by Rating? (Y/N): ").lower() == 'y':
             filters.append("Rating=on")
-        if input("Lọc theo HasReviews? (Y/N): ").lower() == 'y':
+        if input("Filter by HasReviews? (Y/N): ").lower() == 'y':
             filters.append("HasReviews=on")
-        if input("Lọc theo HasRent? (Y/N): ").lower() == 'y':
+        if input("Filter by HasRent? (Y/N): ").lower() == 'y':
             filters.append("HasRent=on")
 
     return mt_option, category_option, price_from, price_to, filters
 
-# Tạo query string từ các thông số người dùng nhập
+# Create query string from user input
 def create_filter_query(price_from, price_to, filters):
     query = []
     if price_from:
@@ -129,33 +129,36 @@ def create_filter_query(price_from, price_to, filters):
     query.extend(filters)
     return "&".join(query)
 
-# Hỏi người dùng về các tùy chọn
+# Display Telegram link
+print("Telegram: https://t.me/sozux")
+
+# Ask user for input
 mt_option, category_option, price_from, price_to, filters = get_user_input()
 
-# Xác định base_url từ các tùy chọn
+# Determine base_url from options
 base_url = f"https://www.mql5.com/en/market/{'mt4' if mt_option == '1' else 'mt5'}/{'expert' if category_option == '1' else 'indicator' if category_option == '2' else 'library' if category_option == '3' else 'utility'}"
 
-# Tạo query string từ các tùy chọn
+# Create filter query string
 filter_query = create_filter_query(price_from, price_to, filters)
 
-# Thông báo các lựa chọn đã được áp dụng
-filter_summary = f"Bắt đầu tiến hành Crawl sản phẩm thuộc {'MT4' if mt_option == '1' else 'MT5'} - danh mục {'expert' if category_option == '1' else 'indicator' if category_option == '2' else 'library' if category_option == '3' else 'utility'}"
+# Display summary of selected filters
+filter_summary = f"Starting to crawl products from {'MT4' if mt_option == '1' else 'MT5'} - category {'expert' if category_option == '1' else 'indicator' if category_option == '2' else 'library' if category_option == '3' else 'utility'}"
 if price_from and price_to:
-    filter_summary += f" - Với giá từ {price_from} đến {price_to}"
+    filter_summary += f" - with price from {price_from} to {price_to}"
 if filters:
     filter_summary += f" - ({', '.join(filters)})"
 
 print(filter_summary)
 
-# Bắt đầu crawl
+# Start crawling
 print("Starting to crawl all pages...")
 
-# Crawl tất cả các trang
+# Crawl all pages
 all_products = crawl_all_pages(base_url)
 
 print("Finished crawling pages. Now grouping products by author...")
 
-# Nhóm các sản phẩm theo "author"
+# Group products by author
 grouped_products = {}
 for product in all_products:
     author = product['author']
@@ -165,7 +168,7 @@ for product in all_products:
 
 print("Finished grouping products. Now generating HTML...")
 
-# Tạo file HTML dạng bảng
+# Create HTML table
 html_content = """
 <!DOCTYPE html>
 <html>
@@ -265,7 +268,7 @@ html_content += """
         function closePopup(id) {
             document.getElementById(id).style.display = 'none';
         }
-        // Đóng popup khi click vào bất kỳ chỗ nào ngoài popup
+        // Close popup when clicking anywhere outside the popup
         window.onclick = function(event) {
             let popups = document.getElementsByClassName('popup');
             for (let i = 0; i < popups.length; i++) {
@@ -309,8 +312,8 @@ html_content += """
 </html>
 """
 
-# Ghi nội dung HTML vào file
+# Write HTML content to file
 with open('product_list.html', 'w', encoding='utf-8') as file:
     file.write(html_content)
 
-print("File HTML đã được tạo thành công!")
+print("HTML file has been created successfully!")
